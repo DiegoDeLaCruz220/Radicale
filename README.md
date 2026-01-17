@@ -23,16 +23,16 @@ In Railway dashboard, add these variables:
 | Variable | Value | Description |
 |----------|-------|-------------|
 | `SUPABASE_URL` | Your Supabase project URL | Format: `https://xxxxx.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Your service role API key | Found in Project Settings → API |
+| `SUPABASE_ANON_KEY` | Your public anon API key | Found in Project Settings → API |
 | `PORT` | `5232` | CardDAV server port |
 
 **Get Supabase credentials:**
 1. Go to Supabase dashboard
 2. Settings → API
 3. Copy **Project URL** → paste as `SUPABASE_URL`
-4. Copy **service_role** key (NOT anon key) → paste as `SUPABASE_SERVICE_ROLE_KEY`
+4. Copy **anon public** key → paste as `SUPABASE_ANON_KEY`
 
-⚠️ **Important:** Use the **service_role** key (secret), not the anon/public key. The service role key bypasses Row Level Security and is safe for server-side use only.
+✅ **Security:** Uses the public anon key with RLS policy for read-only access to contacts table. No access to other tables or write operations.
 
 ### 4. **Set Root Directory** (Important!)
 1. In Railway project settings
@@ -71,7 +71,7 @@ railway link
 
 # Set environment variable
 railway variables set SUPABASE_URL="https://xxxxx.supabase.co"
-railway variables set SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+railway variables set SUPABASE_ANON_KEY="your-anon-public-key"
 
 # Deploy
 railway up
@@ -144,7 +144,7 @@ curl https://your-app-name.up.railway.app/.well-known/carddav
 - **Fix:** Make sure Root Directory is set to `/radicale` in settings
 
 **Issue:** Database connection error
-- **Fix:** Verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are correct. Make sure you're using the service_role key, not anon key.
+- **Fix:** Verify SUPABASE_URL and SUPABASE_ANON_KEY are correct. Check that RLS policy is enabled on contacts table.
 
 **Issue:** No contacts showing up
 - **Fix:** Check Supabase contacts table has data: `SELECT COUNT(*) FROM contacts;`

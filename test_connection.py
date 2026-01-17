@@ -2,11 +2,11 @@ import requests
 
 # Replace these with your actual values
 SUPABASE_URL = "https://xxxxx.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key-here"
+SUPABASE_ANON_KEY = "your-anon-public-key-here"
 
 headers = {
-    'apikey': SUPABASE_SERVICE_ROLE_KEY,
-    'Authorization': f'Bearer {SUPABASE_SERVICE_ROLE_KEY}',
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': f'Bearer {SUPABASE_ANON_KEY}',
     'Content-Type': 'application/json'
 }
 
@@ -29,7 +29,7 @@ try:
     
 except requests.exceptions.HTTPError as e:
     if e.response.status_code == 401:
-        print("❌ INVALID API KEY - Check your SUPABASE_SERVICE_ROLE_KEY")
+        print("❌ INVALID API KEY - Check your SUPABASE_ANON_KEY")
     elif e.response.status_code == 404:
         print("❌ WRONG URL - Check your SUPABASE_URL")
     else:

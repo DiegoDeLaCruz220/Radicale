@@ -162,10 +162,10 @@ class SupabaseStorage(BaseStorage):
     def __init__(self, configuration):
         super().__init__(configuration)
         self.supabase_url = os.getenv('SUPABASE_URL')
-        self.supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        self.supabase_key = os.getenv('SUPABASE_ANON_KEY')
         
         if not self.supabase_url or not self.supabase_key:
-            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required")
+            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required")
     
     def discover(self, path: str, depth: str = "0"):
         """Discover collections"""
