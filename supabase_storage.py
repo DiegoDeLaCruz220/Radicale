@@ -24,7 +24,13 @@ class SupabaseCollection(BaseCollection):
             'Content-Type': 'application/json'
         }
         self._items = {}
+        self._tag = "VADDRESSBOOK"
         self._load_contacts()
+    
+    @property
+    def tag(self):
+        """Return the collection tag"""
+        return self._tag
     
     def _load_contacts(self):
         """Load contacts from Supabase via REST API"""
