@@ -169,24 +169,34 @@ class SupabaseStorage(BaseStorage):
     
     def discover(self, path: str, depth: str = "0"):
         """Discover collections"""
-        if path == "/":
-            # Return the main contacts collection
-            yield types.CollectionOrItem(
-                path="/contacts.vcf/",
-                etag="collection",
-                item=None,
-                collection=SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
-            )
-        elif path == "/contacts.vcf/":
-            # Return all contacts
-            collection = SupabaseCollection(self, path, self.supabase_url, self.supabase_key)
-            for item in collection.get_all():
+        try:
+            if path == "/":
+                # Return the main contacts collection
                 yield types.CollectionOrItem(
-                    path=f"/contacts.vcf/{item['uid']}.vcf",
-                    etag=item['etag'],
-                    item=item,
-                    collection=None
+                    path="/contacts.vcf/",
+                    etag="collection",
+                    item=None,
+                    collection=SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
                 )
+            elif path == "/contacts.vcf/":
+                # Return all contacts
+                collection = SupabaseCollection(self, path, self.supabase_url, self.supabase_key)
+                for item in collection.get_all():
+                    yield types.CollectionOrItem(
+                        path=f"/contacts.vcf/{item['uid']}.vcf",
+                        etag=item['etag'],
+                        item=item,
+                        collection=None
+                    )
+        except Exception as e:
+            print(f"Error in discover: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
+    
+    def verify(self):
+        """Verify storage - always returns True for read-only storage"""
+        return True
     
     def move(self, item, to_collection, to_href):
         """Move not supported"""
