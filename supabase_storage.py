@@ -153,6 +153,27 @@ class SupabaseCollection(BaseCollection):
         """Get all items"""
         return list(self._items.values())
     
+    def get_meta(self, key=None):
+        """Get collection metadata"""
+        if key:
+            return {
+                "tag": "VADDRESSBOOK",
+                "D:displayname": "Contacts"
+            }.get(key)
+        return {
+            "tag": "VADDRESSBOOK",
+            "D:displayname": "Contacts"
+        }
+    
+    def set_meta(self, props):
+        """Setting metadata not supported"""
+        pass
+    
+    @property
+    def last_modified(self):
+        """Return last modified time"""
+        return datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
+    
     def upload(self, href, item):
         """Upload not supported (read-only from Supabase)"""
         raise PermissionError("Contacts are synced from Supabase and cannot be modified via CardDAV")
