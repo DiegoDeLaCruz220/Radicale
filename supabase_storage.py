@@ -1,48 +1,57 @@
 """
 Supabase Storage Plugin for Radicale
-Reads contacts from Supabase contacts table and serves via CardDAV
+Reads contacts from Supabase contacts table via REST API and serves via CardDAV
 """
 
 import os
 import json
+import requests
 from typing import Iterable, Optional
 from radicale.storage import BaseCollection, BaseStorage
 from radicale import pathutils, types
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from datetime import datetime
 
 class SupabaseCollection(BaseCollection):
-    """Collection backed by Supabase contacts table"""
+    """Collection backed by Supabase contacts table via REST API"""
     
-    def __init__(self, storage, path, connection):
+    def __init__(self, storage, path, supabase_url, supabase_key):
         super().__init__(storage, path)
-        self.connection = connection
+        self.supabase_url = supabase_url
+        self.supabase_key = supabase_key
+        self.headers = {
+            'apikey': supabase_key,
+            'Authorization': f'Bearer {supabase_key}',
+            'Content-Type': 'application/json'
+        }
         self._items = {}
         self._load_contacts()
     
     def _load_contacts(self):
-        """Load contacts from Supabase"""
-        with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("""
-                SELECT id, uid, display_name, first_name, last_name, 
-                       email, email_work, email_home,
-                       phone, phone_work, phone_mobile, phone_home,
-                       company, job_title, department,
-                       addresses, website, notes, birthday, anniversary,
-                       updated_at, etag
-                FROM contacts
-                ORDER BY display_name
-            """)
+        """Load contacts from Supabase via REST API"""
+        try:
+            # Query contacts table via Supabase REST API
+            url = f"{self.supabase_url}/rest/v1/contacts"
+            params = {
+                'select': '*',
+                'order': 'display_name.asc'
+            }
             
-            for row in cursor.fetchall():
-                vcard = self._generate_vcard(row)
-                self._items[row['uid']] = {
-                    'uid': row['uid'],
-                    'etag': row['etag'] or str(hash(vcard)),
+            response = requests.get(url, headers=self.headers, params=params)
+            response.raise_for_status()
+            
+            contacts = response.json()
+            
+            for contact in contacts:
+                vcard = self._generate_vcard(contact)
+                self._items[contact['uid']] = {
+                    'uid': contact['uid'],
+                    'etag': contact.get('etag') or str(hash(vcard)),
                     'text': vcard,
-                    'last-modified': row['updated_at'].isoformat()
+                    'last-modified': contact['updated_at']
                 }
+        except Exception as e:
+            print(f"Error loading contacts from Supabase: {e}")
+            raise
     
     def _generate_vcard(self, contact):
         """Generate vCard 3.0 format from contact data"""
@@ -109,13 +118,20 @@ class SupabaseCollection(BaseCollection):
             lines.append(f'NOTE:{notes}')
         
         # Birthday
-        if contact['birthday']:
-            lines.append(f'BDAY:{contact["birthday"].strftime("%Y%m%d")}')
+        if contact.get('birthday'):
+            try:
+                bday = datetime.fromisoformat(contact['birthday'].replace('Z', '+00:00'))
+                lines.append(f'BDAY:{bday.strftime("%Y%m%d")}')
+            except:
+                pass
         
         # Revision timestamp
-        if contact['updated_at']:
-            rev = contact['updated_at'].strftime('%Y%m%dT%H%M%SZ')
-            lines.append(f'REV:{rev}')
+        if contact.get('updated_at'):
+            try:
+                rev = datetime.fromisoformat(contact['updated_at'].replace('Z', '+00:00'))
+                lines.append(f'REV:{rev.strftime("%Y%m%dT%H%M%SZ")}')
+            except:
+                pass
         
         lines.append('END:VCARD')
         return '\r\n'.join(lines) + '\r\n'
@@ -141,16 +157,15 @@ class SupabaseCollection(BaseCollection):
 
 
 class SupabaseStorage(BaseStorage):
-    """Storage plugin that reads from Supabase"""
+    """Storage plugin that reads from Supabase via REST API"""
     
     def __init__(self, configuration):
         super().__init__(configuration)
-        self.database_url = os.getenv('DATABASE_URL')
-        if not self.database_url:
-            raise ValueError("DATABASE_URL environment variable is required")
+        self.supabase_url = os.getenv('SUPABASE_URL')
+        self.supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
         
-        # Test connection
-        self.connection = psycopg2.connect(self.database_url)
+        if not self.supabase_url or not self.supabase_key:
+            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required")
     
     def discover(self, path: str, depth: str = "0"):
         """Discover collections"""
@@ -160,11 +175,11 @@ class SupabaseStorage(BaseStorage):
                 path="/contacts.vcf/",
                 etag="collection",
                 item=None,
-                collection=SupabaseCollection(self, "/contacts.vcf/", self.connection)
+                collection=SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
             )
         elif path == "/contacts.vcf/":
             # Return all contacts
-            collection = SupabaseCollection(self, path, self.connection)
+            collection = SupabaseCollection(self, path, self.supabase_url, self.supabase_key)
             for item in collection.get_all():
                 yield types.CollectionOrItem(
                     path=f"/contacts.vcf/{item['uid']}.vcf",

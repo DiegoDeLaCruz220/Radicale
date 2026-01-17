@@ -22,14 +22,17 @@ In Railway dashboard, add these variables:
 
 | Variable | Value | Description |
 |----------|-------|-------------|
-| `DATABASE_URL` | Your Supabase connection string | Format: `postgresql://user:pass@host:5432/database` |
+| `SUPABASE_URL` | Your Supabase project URL | Format: `https://xxxxx.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your service role API key | Found in Project Settings → API |
 | `PORT` | `5232` | CardDAV server port |
 
-**Get Supabase connection string:**
+**Get Supabase credentials:**
 1. Go to Supabase dashboard
-2. Settings → Database
-3. Copy "Connection string" (Direct connection)
-4. Replace `[YOUR-PASSWORD]` with your actual password
+2. Settings → API
+3. Copy **Project URL** → paste as `SUPABASE_URL`
+4. Copy **service_role** key (NOT anon key) → paste as `SUPABASE_SERVICE_ROLE_KEY`
+
+⚠️ **Important:** Use the **service_role** key (secret), not the anon/public key. The service role key bypasses Row Level Security and is safe for server-side use only.
 
 ### 4. **Set Root Directory** (Important!)
 1. In Railway project settings
@@ -67,7 +70,8 @@ railway init
 railway link
 
 # Set environment variable
-railway variables set DATABASE_URL="postgresql://user:pass@host:5432/database"
+railway variables set SUPABASE_URL="https://xxxxx.supabase.co"
+railway variables set SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 
 # Deploy
 railway up
@@ -140,7 +144,7 @@ curl https://your-app-name.up.railway.app/.well-known/carddav
 - **Fix:** Make sure Root Directory is set to `/radicale` in settings
 
 **Issue:** Database connection error
-- **Fix:** Verify DATABASE_URL format and that Supabase allows Railway's IP
+- **Fix:** Verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are correct. Make sure you're using the service_role key, not anon key.
 
 **Issue:** No contacts showing up
 - **Fix:** Check Supabase contacts table has data: `SELECT COUNT(*) FROM contacts;`
