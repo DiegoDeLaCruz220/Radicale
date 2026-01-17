@@ -12,6 +12,9 @@ RUN pip install --no-cache-dir \
 COPY config /etc/radicale/config
 COPY supabase_storage.py /app/supabase_storage.py
 
+# Set Python path so Radicale can find our custom storage module
+ENV PYTHONPATH=/app
+
 # Expose CardDAV port
 EXPOSE 5232
 
