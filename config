@@ -1,0 +1,16 @@
+[server]
+hosts = 0.0.0.0:5232
+
+[auth]
+type = none
+# In production, use htpasswd or integrate with your JWT auth
+
+[storage]
+type = radicale.storage.multifilesystem.plugin
+filesystem_folder = /data/radicale
+
+[logging]
+level = info
+
+[web]
+type = internal
