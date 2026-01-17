@@ -195,3 +195,6 @@ class SupabaseStorage(BaseStorage):
     def create_collection(self, href, props=None):
         """Creating collections not supported"""
         raise PermissionError("Creating collections not supported")
+
+# Radicale expects a class named 'Storage'
+Storage = SupabaseStorage
