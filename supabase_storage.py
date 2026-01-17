@@ -175,19 +175,26 @@ class SupabaseStorage(BaseStorage):
     
     def discover(self, path: str, depth: str = "0"):
         """Discover collections"""
+        print(f"[DEBUG] discover called with path='{path}', depth='{depth}'")
         try:
             if path == "/":
                 # Return the main contacts collection
+                print("[DEBUG] Returning root collection")
+                collection = SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
+                print(f"[DEBUG] Collection created, tag={collection.tag}")
                 yield types.CollectionOrItem(
                     path="/contacts.vcf/",
                     etag="collection",
                     item=None,
-                    collection=SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
+                    collection=collection
                 )
             elif path == "/contacts.vcf/":
                 # Return all contacts
+                print("[DEBUG] Returning contacts collection items")
                 collection = SupabaseCollection(self, path, self.supabase_url, self.supabase_key)
-                for item in collection.get_all():
+                items = collection.get_all()
+                print(f"[DEBUG] Found {len(items)} contacts")
+                for item in items:
                     yield types.CollectionOrItem(
                         path=f"/contacts.vcf/{item['uid']}.vcf",
                         etag=item['etag'],
@@ -195,7 +202,7 @@ class SupabaseStorage(BaseStorage):
                         collection=None
                     )
         except Exception as e:
-            print(f"Error in discover: {e}")
+            print(f"[ERROR] Exception in discover: {e}")
             import traceback
             traceback.print_exc()
             raise
