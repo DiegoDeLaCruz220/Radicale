@@ -1,0 +1,16 @@
+# Radicale CardDAV Server
+
+A lightweight CardDAV server that syncs contacts from Supabase to your devices.
+
+## Features
+- Reads contacts from Supabase via REST API
+- Real-time sync with iOS, Android, macOS, Thunderbird
+- Row Level Security for safe API access
+- No local storage - all data from Supabase
+
+## Quick Start
+See [README.md](README.md) for full deployment instructions.
+
+## Environment Variables Required
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
