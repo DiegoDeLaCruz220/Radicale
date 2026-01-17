@@ -6,7 +6,7 @@ type = none
 # In production, use htpasswd or integrate with your JWT auth
 
 [storage]
-type = radicale.storage.multifilesystem.plugin
+type = supabase_storage
 
 [logging]
 level = info
