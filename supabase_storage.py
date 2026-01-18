@@ -230,26 +230,39 @@ class SupabaseStorage(BaseStorage):
         """Discover collections"""
         debug_log(f"discover called with path='{path}', depth='{depth}'")
         try:
-            if path == "/":
-                # Return the main contacts collection
+            # Strip leading/trailing slashes for comparison
+            clean_path = path.strip("/")
+            
+            if path == "/" or not clean_path:
+                # Root - return user principals and contacts collection
                 debug_log("Returning root collection")
                 collection = SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
-                debug_log(f"Collection created, tag={collection.tag}")
                 yield types.CollectionOrItem(
                     path="/contacts.vcf/",
                     etag="collection",
                     item=None,
                     collection=collection
                 )
-            elif path == "/contacts.vcf/":
-                # Return all contacts
+            elif "/" not in clean_path:
+                # User principal (e.g., /diego@adlcrm.com/)
+                debug_log(f"Returning user principal: {clean_path}")
+                # Return the contacts collection under this principal
+                collection = SupabaseCollection(self, f"/{clean_path}/contacts.vcf/", self.supabase_url, self.supabase_key)
+                yield types.CollectionOrItem(
+                    path=f"/{clean_path}/contacts.vcf/",
+                    etag="collection",
+                    item=None,
+                    collection=collection
+                )
+            elif path == "/contacts.vcf/" or clean_path.endswith("/contacts.vcf"):
+                # Return all contacts as items
                 debug_log("Returning contacts collection items")
                 collection = SupabaseCollection(self, path, self.supabase_url, self.supabase_key)
                 items = collection.get_all()
                 debug_log(f"Found {len(items)} contacts")
                 for item in items:
                     yield types.CollectionOrItem(
-                        path=f"/contacts.vcf/{item['uid']}.vcf",
+                        path=f"{path}{item['uid']}.vcf",
                         etag=item['etag'],
                         item=item,
                         collection=None
@@ -268,8 +281,15 @@ class SupabaseStorage(BaseStorage):
         """Move not supported"""
         raise PermissionError("Moving contacts not supported")
     
-    def create_collection(self, href, props=None):
-        """Creating collections not supported"""
+    def create_collection(self, href, items=None, props=None):
+        """Creating collections not supported, but return success for principals"""
+        debug_log(f"create_collection called with href='{href}'")
+        # If it's a principal path (user/), just return empty - principals are virtual
+        clean_href = href.strip("/")
+        if "/" not in clean_href:
+            debug_log(f"Allowing principal creation: {href}")
+            # Return empty collection for principal
+            return (SupabaseCollection(self, f"/{clean_href}/contacts.vcf/", self.supabase_url, self.supabase_key), {}, [])
         raise PermissionError("Creating collections not supported")
 
 # Radicale expects a class named 'Storage'
