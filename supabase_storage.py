@@ -257,10 +257,13 @@ class SupabaseStorage(BaseStorage):
             # Strip leading/trailing slashes for comparison
             clean_path = path.strip("/")
             
-            # Extract user from path if present (e.g., /diego@adlcrm.com/)
+            # Extract user from path (e.g., diego@adlcrm.com from /diego@adlcrm.com/contacts.vcf/)
             user = None
-            if clean_path and "/" not in clean_path and "@" in clean_path:
-                user = clean_path
+            if clean_path:
+                first_part = clean_path.split('/')[0]
+                if '@' in first_part:
+                    user = first_part
+                    debug_log(f"Extracted user from path: {user}")
             
             if path == "/" or not clean_path:
                 # Root - return contacts collection
@@ -273,7 +276,7 @@ class SupabaseStorage(BaseStorage):
                 # Return the contacts collection under this principal
                 collection = SupabaseCollection(self, f"/{clean_path}/contacts.vcf/", self.supabase_url, self.supabase_key, user=clean_path)
                 yield collection
-            elif path == "/contacts.vcf/" or clean_path.endswith("/contacts.vcf"):
+            elif path == "/contacts.vcf/" or clean_path.endswith("/contacts.vcf") or "contacts.vcf" in clean_path:
                 # Return the collection itself, not items
                 debug_log("Returning contacts collection")
                 collection = SupabaseCollection(self, path, self.supabase_url, self.supabase_key, user=user)
