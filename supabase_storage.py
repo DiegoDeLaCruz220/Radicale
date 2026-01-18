@@ -234,39 +234,26 @@ class SupabaseStorage(BaseStorage):
             clean_path = path.strip("/")
             
             if path == "/" or not clean_path:
-                # Root - return user principals and contacts collection
+                # Root - return contacts collection
                 debug_log("Returning root collection")
                 collection = SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
-                yield types.CollectionOrItem(
-                    path="/contacts.vcf/",
-                    etag="collection",
-                    item=None,
-                    collection=collection
-                )
+                yield collection
             elif "/" not in clean_path:
                 # User principal (e.g., /diego@adlcrm.com/)
                 debug_log(f"Returning user principal: {clean_path}")
                 # Return the contacts collection under this principal
                 collection = SupabaseCollection(self, f"/{clean_path}/contacts.vcf/", self.supabase_url, self.supabase_key)
-                yield types.CollectionOrItem(
-                    path=f"/{clean_path}/contacts.vcf/",
-                    etag="collection",
-                    item=None,
-                    collection=collection
-                )
+                yield collection
             elif path == "/contacts.vcf/" or clean_path.endswith("/contacts.vcf"):
-                # Return all contacts as items
-                debug_log("Returning contacts collection items")
+                # Return the collection itself, not items
+                debug_log("Returning contacts collection")
                 collection = SupabaseCollection(self, path, self.supabase_url, self.supabase_key)
-                items = collection.get_all()
-                debug_log(f"Found {len(items)} contacts")
-                for item in items:
-                    yield types.CollectionOrItem(
-                        path=f"{path}{item['uid']}.vcf",
-                        etag=item['etag'],
-                        item=item,
-                        collection=None
-                    )
+                yield collection
+                # If depth > 0, also return items
+                if depth != "0":
+                    debug_log("Returning contacts collection items")
+                    for item in collection.get_all():
+                        yield item
         except Exception as e:
             debug_log(f"Exception in discover: {e}")
             import traceback
