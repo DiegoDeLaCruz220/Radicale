@@ -38,6 +38,7 @@ class SupabaseCollection(BaseCollection):
         
         # Try to get user's JWT for RLS, fall back to anon key
         jwt = get_user_jwt(user) if user else None
+        debug_log(f"Retrieved JWT for {user}: {jwt[:50] if jwt else 'None'}...")
         
         # JWT should be just the token string, not prefixed with "Bearer"
         if jwt:
