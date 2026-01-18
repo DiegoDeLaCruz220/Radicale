@@ -8,6 +8,7 @@ import sys
 import json
 import requests
 from typing import Iterable, Optional
+from contextlib import contextmanager
 from radicale.storage import BaseCollection, BaseStorage
 from radicale import pathutils, types
 from datetime import datetime
@@ -20,7 +21,9 @@ class SupabaseCollection(BaseCollection):
     """Collection backed by Supabase contacts table via REST API"""
     
     def __init__(self, storage, path, supabase_url, supabase_key):
-        super().__init__(storage, path)
+        super().__init__()
+        self._storage = storage
+        self._path = path.strip("/")
         self.supabase_url = supabase_url
         self.supabase_key = supabase_key
         self.headers = {
@@ -31,6 +34,11 @@ class SupabaseCollection(BaseCollection):
         self._items = {}
         self._tag = "VADDRESSBOOK"
         self._load_contacts()
+    
+    @property
+    def path(self):
+        """Return the collection path"""
+        return self._path
     
     @property
     def tag(self):
@@ -203,6 +211,13 @@ class SupabaseStorage(BaseStorage):
             raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required")
         
         debug_log("SupabaseStorage initialized successfully")
+    
+    @staticmethod
+    @contextmanager
+    def acquire_lock(mode, user=""):
+        """Lock not needed for read-only storage"""
+        debug_log(f"acquire_lock called with mode='{mode}', user='{user}'")
+        yield  # No actual locking for read-only
     
     def _get_collection(self, path):
         """Get a single collection by path"""
