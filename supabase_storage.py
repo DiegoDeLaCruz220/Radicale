@@ -253,6 +253,16 @@ class SupabaseCollection(BaseCollection):
         """Return last modified time"""
         return datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
     
+    def serialize(self):
+        """Serialize entire collection to vCard format for download"""
+        if not self._items:
+            return ""
+        # Combine all vCards into one file
+        vcards = []
+        for item in self._items.values():
+            vcards.append(item.serialize())
+        return "".join(vcards)
+    
     def upload(self, href, item):
         """Upload not supported (read-only from Supabase)"""
         raise PermissionError("Contacts are synced from Supabase and cannot be modified via CardDAV")
