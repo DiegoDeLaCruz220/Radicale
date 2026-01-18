@@ -1,11 +1,30 @@
 """
 Supabase Authentication Plugin for Radicale
-Authenticates users against Supabase Auth API
+Authenticates users against Supabase Auth API and stores JWT for storage plugin
 """
 
 import os
 import requests
+import threading
 from radicale.auth import BaseAuth
+
+# Thread-local storage for JWT tokens
+_jwt_storage = threading.local()
+
+
+def get_user_jwt(username: str):
+    """Get JWT token for a user from thread-local storage"""
+    if not hasattr(_jwt_storage, 'tokens'):
+        return None
+    return _jwt_storage.tokens.get(username)
+
+
+def set_user_jwt(username: str, jwt: str):
+    """Store JWT token for a user in thread-local storage"""
+    if not hasattr(_jwt_storage, 'tokens'):
+        _jwt_storage.tokens = {}
+    _jwt_storage.tokens[username] = jwt
+
 
 class SupabaseAuth(BaseAuth):
     """Authentication using Supabase Auth API"""
@@ -38,7 +57,11 @@ class SupabaseAuth(BaseAuth):
             response = requests.post(url, headers=headers, json=data)
             
             if response.status_code == 200:
-                # Authentication successful
+                # Authentication successful - store JWT
+                jwt_data = response.json()
+                access_token = jwt_data.get('access_token')
+                if access_token:
+                    set_user_jwt(login, access_token)
                 return login
             else:
                 # Auth failed

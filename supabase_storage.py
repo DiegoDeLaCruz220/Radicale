@@ -1,6 +1,7 @@
 """
 Supabase Storage Plugin for Radicale
 Reads contacts from Supabase contacts table via REST API and serves via CardDAV
+Uses per-user JWT for RLS policies
 """
 
 import os
@@ -13,6 +14,13 @@ from radicale.storage import BaseCollection, BaseStorage
 from radicale import pathutils, types
 from datetime import datetime
 
+# Import JWT helper from auth module
+try:
+    from supabase_auth import get_user_jwt
+except ImportError:
+    def get_user_jwt(username):
+        return None
+
 def debug_log(msg):
     """Log debug messages to stderr with flush"""
     print(f"[DEBUG] {msg}", file=sys.stderr, flush=True)
@@ -20,17 +28,25 @@ def debug_log(msg):
 class SupabaseCollection(BaseCollection):
     """Collection backed by Supabase contacts table via REST API"""
     
-    def __init__(self, storage, path, supabase_url, supabase_key):
+    def __init__(self, storage, path, supabase_url, supabase_key, user=None):
         super().__init__()
         self._storage = storage
         self._path = path.strip("/")
         self.supabase_url = supabase_url
         self.supabase_key = supabase_key
+        self.user = user
+        
+        # Try to get user's JWT for RLS, fall back to anon key
+        jwt = get_user_jwt(user) if user else None
+        auth_token = jwt if jwt else supabase_key
+        
         self.headers = {
             'apikey': supabase_key,
-            'Authorization': f'Bearer {supabase_key}',
+            'Authorization': f'Bearer {auth_token}',
             'Content-Type': 'application/json'
         }
+        debug_log(f"Collection initialized for user={user}, using_jwt={bool(jwt)}")
+        
         self._items = {}
         self._tag = "VADDRESSBOOK"
         self._load_contacts()
@@ -203,13 +219,12 @@ class SupabaseStorage(BaseStorage):
         debug_log("SupabaseStorage.__init__ called")
         super().__init__(configuration)
         self.supabase_url = os.getenv('SUPABASE_URL')
-        # Use service role key to bypass RLS - authentication is handled by Radicale
-        self.supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+        self.supabase_key = os.getenv('SUPABASE_ANON_KEY')
         debug_log(f"SUPABASE_URL={self.supabase_url}")
-        debug_log(f"Using key type: {'SERVICE_ROLE' if os.getenv('SUPABASE_SERVICE_ROLE_KEY') else 'ANON'}")
+        debug_log(f"Using RLS with per-user JWTs")
         
         if not self.supabase_url or not self.supabase_key:
-            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) environment variables are required")
+            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required")
         
         debug_log("SupabaseStorage initialized successfully")
     
@@ -220,11 +235,11 @@ class SupabaseStorage(BaseStorage):
         debug_log(f"acquire_lock called with mode='{mode}', user='{user}'")
         yield  # No actual locking for read-only
     
-    def _get_collection(self, path):
+    def _get_collection(self, path, user=None):
         """Get a single collection by path"""
-        debug_log(f"_get_collection called with path='{path}'")
+        debug_log(f"_get_collection called with path='{path}', user='{user}'")
         if path == "/" or path == "/contacts.vcf/":
-            return SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
+            return SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key, user=user)
         return None
     
     def discover(self, path: str, depth: str = "0"):
@@ -234,21 +249,26 @@ class SupabaseStorage(BaseStorage):
             # Strip leading/trailing slashes for comparison
             clean_path = path.strip("/")
             
+            # Extract user from path if present (e.g., /diego@adlcrm.com/)
+            user = None
+            if clean_path and "/" not in clean_path and "@" in clean_path:
+                user = clean_path
+            
             if path == "/" or not clean_path:
                 # Root - return contacts collection
                 debug_log("Returning root collection")
-                collection = SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
+                collection = SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key, user=user)
                 yield collection
             elif "/" not in clean_path:
                 # User principal (e.g., /diego@adlcrm.com/)
                 debug_log(f"Returning user principal: {clean_path}")
                 # Return the contacts collection under this principal
-                collection = SupabaseCollection(self, f"/{clean_path}/contacts.vcf/", self.supabase_url, self.supabase_key)
+                collection = SupabaseCollection(self, f"/{clean_path}/contacts.vcf/", self.supabase_url, self.supabase_key, user=clean_path)
                 yield collection
             elif path == "/contacts.vcf/" or clean_path.endswith("/contacts.vcf"):
                 # Return the collection itself, not items
                 debug_log("Returning contacts collection")
-                collection = SupabaseCollection(self, path, self.supabase_url, self.supabase_key)
+                collection = SupabaseCollection(self, path, self.supabase_url, self.supabase_key, user=user)
                 yield collection
                 # If depth > 0, also return items
                 if depth != "0":
