@@ -46,11 +46,14 @@ class SupabaseCollection(BaseCollection):
         else:
             auth_token = supabase_key
         
+        debug_log(f"auth_token value: {auth_token[:50]}...")
+        
         self.headers = {
             'apikey': supabase_key,
             'Authorization': f'Bearer {auth_token}',
             'Content-Type': 'application/json'
         }
+        debug_log(f"Headers Authorization: {self.headers['Authorization'][:70]}...")
         debug_log(f"Collection initialized for user={user}, using_jwt={bool(jwt)}")
         
         self._items = {}
