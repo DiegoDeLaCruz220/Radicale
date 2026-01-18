@@ -204,6 +204,13 @@ class SupabaseStorage(BaseStorage):
         
         debug_log("SupabaseStorage initialized successfully")
     
+    def _get_collection(self, path):
+        """Get a single collection by path"""
+        debug_log(f"_get_collection called with path='{path}'")
+        if path == "/" or path == "/contacts.vcf/":
+            return SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
+        return None
+    
     def discover(self, path: str, depth: str = "0"):
         """Discover collections"""
         debug_log(f"discover called with path='{path}', depth='{depth}'")
