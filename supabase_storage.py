@@ -71,6 +71,11 @@ class SupabaseCollection(BaseCollection):
         """Return the collection tag"""
         return self._tag
     
+    @property
+    def etag(self):
+        """Return collection etag"""
+        return f'"{hash(str(len(self._items)))}"'
+    
     def _load_contacts(self):
         """Load contacts from Supabase via REST API with role-based filtering"""
         try:
