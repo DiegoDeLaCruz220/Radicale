@@ -4,6 +4,7 @@ Authenticates users against Supabase Auth API and stores JWT for storage plugin
 """
 
 import os
+import sys
 import requests
 import threading
 from radicale.auth import BaseAuth
@@ -61,6 +62,7 @@ class SupabaseAuth(BaseAuth):
                 jwt_data = response.json()
                 access_token = jwt_data.get('access_token')
                 if access_token:
+                    print(f"[DEBUG AUTH] Storing JWT for {login}: {access_token[:50]}...", file=sys.stderr, flush=True)
                     set_user_jwt(login, access_token)
                 return login
             else:

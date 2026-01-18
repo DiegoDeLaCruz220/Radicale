@@ -38,7 +38,12 @@ class SupabaseCollection(BaseCollection):
         
         # Try to get user's JWT for RLS, fall back to anon key
         jwt = get_user_jwt(user) if user else None
-        auth_token = jwt if jwt else supabase_key
+        
+        # JWT should be just the token string, not prefixed with "Bearer"
+        if jwt:
+            auth_token = jwt
+        else:
+            auth_token = supabase_key
         
         self.headers = {
             'apikey': supabase_key,
