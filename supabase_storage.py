@@ -187,12 +187,17 @@ class SupabaseStorage(BaseStorage):
     """Storage plugin that reads from Supabase via REST API"""
     
     def __init__(self, configuration):
+        print("[DEBUG] SupabaseStorage.__init__ called")
         super().__init__(configuration)
         self.supabase_url = os.getenv('SUPABASE_URL')
         self.supabase_key = os.getenv('SUPABASE_ANON_KEY')
+        print(f"[DEBUG] SUPABASE_URL={self.supabase_url}")
+        print(f"[DEBUG] SUPABASE_ANON_KEY={'set' if self.supabase_key else 'not set'}")
         
         if not self.supabase_url or not self.supabase_key:
             raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required")
+        
+        print("[DEBUG] SupabaseStorage initialized successfully")
     
     def discover(self, path: str, depth: str = "0"):
         """Discover collections"""
