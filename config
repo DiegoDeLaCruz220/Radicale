@@ -7,9 +7,6 @@ type = supabase_auth
 [storage]
 type = supabase_storage
 
-[rights]
-type = from_file
-
 [logging]
 level = info
 
