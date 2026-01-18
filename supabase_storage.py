@@ -71,10 +71,16 @@ class SupabaseCollection(BaseCollection):
                 'order': 'display_name.asc'
             }
             
+            debug_log(f"Loading contacts for user={self.user}")
+            debug_log(f"Authorization: Bearer {self.headers['Authorization'][:70]}...")
+            
             response = requests.get(url, headers=self.headers, params=params)
+            debug_log(f"Contacts API response: {response.status_code}")
+            
             response.raise_for_status()
             
             contacts = response.json()
+            debug_log(f"Received {len(contacts)} contacts from Supabase")
             
             for contact in contacts:
                 vcard = self._generate_vcard(contact)
@@ -85,7 +91,9 @@ class SupabaseCollection(BaseCollection):
                     'last-modified': contact['updated_at']
                 }
         except Exception as e:
-            print(f"Error loading contacts from Supabase: {e}")
+            debug_log(f"Error loading contacts: {e}")
+            import traceback
+            traceback.print_exc(file=sys.stderr)
             raise
     
     def _generate_vcard(self, contact):
