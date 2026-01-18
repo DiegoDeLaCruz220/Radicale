@@ -232,6 +232,12 @@ class SupabaseCollection(BaseCollection):
         """Get all items"""
         return list(self._items.values())
     
+    def list(self, hrefs=None):
+        """List items in collection"""
+        if hrefs:
+            return self.get_multi(hrefs)
+        return self.get_all()
+    
     def get_meta(self, key=None):
         """Get collection metadata"""
         if key:
