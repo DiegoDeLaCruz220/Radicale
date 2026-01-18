@@ -4,12 +4,17 @@ Reads contacts from Supabase contacts table via REST API and serves via CardDAV
 """
 
 import os
+import sys
 import json
 import requests
 from typing import Iterable, Optional
 from radicale.storage import BaseCollection, BaseStorage
 from radicale import pathutils, types
 from datetime import datetime
+
+def debug_log(msg):
+    """Log debug messages to stderr with flush"""
+    print(f"[DEBUG] {msg}", file=sys.stderr, flush=True)
 
 class SupabaseCollection(BaseCollection):
     """Collection backed by Supabase contacts table via REST API"""
@@ -187,27 +192,27 @@ class SupabaseStorage(BaseStorage):
     """Storage plugin that reads from Supabase via REST API"""
     
     def __init__(self, configuration):
-        print("[DEBUG] SupabaseStorage.__init__ called")
+        debug_log("SupabaseStorage.__init__ called")
         super().__init__(configuration)
         self.supabase_url = os.getenv('SUPABASE_URL')
         self.supabase_key = os.getenv('SUPABASE_ANON_KEY')
-        print(f"[DEBUG] SUPABASE_URL={self.supabase_url}")
-        print(f"[DEBUG] SUPABASE_ANON_KEY={'set' if self.supabase_key else 'not set'}")
+        debug_log(f"SUPABASE_URL={self.supabase_url}")
+        debug_log(f"SUPABASE_ANON_KEY={'set' if self.supabase_key else 'not set'}")
         
         if not self.supabase_url or not self.supabase_key:
             raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required")
         
-        print("[DEBUG] SupabaseStorage initialized successfully")
+        debug_log("SupabaseStorage initialized successfully")
     
     def discover(self, path: str, depth: str = "0"):
         """Discover collections"""
-        print(f"[DEBUG] discover called with path='{path}', depth='{depth}'")
+        debug_log(f"discover called with path='{path}', depth='{depth}'")
         try:
             if path == "/":
                 # Return the main contacts collection
-                print("[DEBUG] Returning root collection")
+                debug_log("Returning root collection")
                 collection = SupabaseCollection(self, "/contacts.vcf/", self.supabase_url, self.supabase_key)
-                print(f"[DEBUG] Collection created, tag={collection.tag}")
+                debug_log(f"Collection created, tag={collection.tag}")
                 yield types.CollectionOrItem(
                     path="/contacts.vcf/",
                     etag="collection",
@@ -216,10 +221,10 @@ class SupabaseStorage(BaseStorage):
                 )
             elif path == "/contacts.vcf/":
                 # Return all contacts
-                print("[DEBUG] Returning contacts collection items")
+                debug_log("Returning contacts collection items")
                 collection = SupabaseCollection(self, path, self.supabase_url, self.supabase_key)
                 items = collection.get_all()
-                print(f"[DEBUG] Found {len(items)} contacts")
+                debug_log(f"Found {len(items)} contacts")
                 for item in items:
                     yield types.CollectionOrItem(
                         path=f"/contacts.vcf/{item['uid']}.vcf",
@@ -228,9 +233,9 @@ class SupabaseStorage(BaseStorage):
                         collection=None
                     )
         except Exception as e:
-            print(f"[ERROR] Exception in discover: {e}")
+            debug_log(f"Exception in discover: {e}")
             import traceback
-            traceback.print_exc()
+            traceback.print_exc(file=sys.stderr)
             raise
     
     def verify(self):
