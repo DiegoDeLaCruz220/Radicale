@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir \
 COPY config /etc/radicale/config
 COPY supabase_storage.py /app/supabase_storage.py
 COPY supabase_auth.py /app/supabase_auth.py
+COPY supabase_rights.py /app/supabase_rights.py
+COPY supabase_rights.py /app/supabase_rights.py
 
 # Set Python path so Radicale can find our custom storage module
 ENV PYTHONPATH=/app
