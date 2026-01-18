@@ -129,9 +129,8 @@ class SupabaseCollection(BaseCollection):
             
             for contact in contacts:
                 vcard_text = self._generate_vcard(contact)
-                # Create Radicale Item object with proper collection reference
-                item = Item(collection_path=self.path)
-                item.prepare(vcard_text, "VADDRESSBOOK", contact['uid'])
+                # Create Radicale Item object with vCard text
+                item = Item(collection_path=self.path, text=vcard_text)
                 self._items[contact['uid']] = item
         except Exception as e:
             debug_log(f"Error loading contacts: {e}")
