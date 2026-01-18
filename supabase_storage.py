@@ -81,7 +81,9 @@ class SupabaseCollection(BaseCollection):
                     'select': 'id,email,role',
                     'email': f'eq.{self.user}'
                 }
+                debug_log(f"Querying employees: {emp_url} with params={emp_params}")
                 emp_response = requests.get(emp_url, headers=self.headers, params=emp_params)
+                debug_log(f"Employee API response: status={emp_response.status_code}, body={emp_response.text[:300]}")
                 if emp_response.status_code == 200:
                     emp_data = emp_response.json()
                     if emp_data:
