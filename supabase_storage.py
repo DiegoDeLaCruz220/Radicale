@@ -12,6 +12,7 @@ from typing import Iterable, Optional
 from contextlib import contextmanager
 from radicale.storage import BaseCollection, BaseStorage
 from radicale import pathutils, types
+from radicale.item import Item
 from datetime import datetime
 
 # Import JWT helper from auth module
@@ -127,13 +128,11 @@ class SupabaseCollection(BaseCollection):
             debug_log(f"Received {len(contacts)} contacts from Supabase")
             
             for contact in contacts:
-                vcard = self._generate_vcard(contact)
-                self._items[contact['uid']] = {
-                    'uid': contact['uid'],
-                    'etag': contact.get('etag') or str(hash(vcard)),
-                    'text': vcard,
-                    'last-modified': contact['updated_at']
-                }
+                vcard_text = self._generate_vcard(contact)
+                # Create Radicale Item object with proper collection reference
+                item = Item(collection_path=self.path)
+                item.prepare(vcard_text, "VADDRESSBOOK", contact['uid'])
+                self._items[contact['uid']] = item
         except Exception as e:
             debug_log(f"Error loading contacts: {e}")
             import traceback
