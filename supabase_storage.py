@@ -71,18 +71,51 @@ class SupabaseCollection(BaseCollection):
         return self._tag
     
     def _load_contacts(self):
-        """Load contacts from Supabase via REST API"""
+        """Load contacts from Supabase via REST API with role-based filtering"""
         try:
-            # Query contacts table via Supabase REST API
+            # Get employee info for the authenticated user
+            employee = None
+            if self.user:
+                emp_url = f"{self.supabase_url}/rest/v1/employees"
+                emp_params = {
+                    'select': 'id,email,role',
+                    'email': f'eq.{self.user}'
+                }
+                emp_response = requests.get(emp_url, headers=self.headers, params=emp_params)
+                if emp_response.status_code == 200:
+                    emp_data = emp_response.json()
+                    if emp_data:
+                        employee = emp_data[0]
+                        debug_log(f"Employee found: id={employee['id']}, role={employee['role']}")
+            
+            # Build contacts query based on role
             url = f"{self.supabase_url}/rest/v1/contacts"
             params = {
                 'select': '*',
                 'order': 'display_name.asc'
             }
             
-            debug_log(f"Loading contacts for user={self.user}")
-            debug_log(f"Authorization: Bearer {self.headers['Authorization'][:70]}...")
+            if employee:
+                role = employee['role']
+                emp_id = employee['id']
+                
+                # ADMIN, PROJECT_MANAGER, EXECUTIVE see all contacts
+                if role in ['ADMIN', 'PROJECT_MANAGER', 'EXECUTIVE']:
+                    debug_log(f"Loading all contacts for {role}")
+                    # No filter - get all contacts
+                else:
+                    # Other roles see only their owned contacts + shared
+                    debug_log(f"Loading filtered contacts for {role}")
+                    # Filter: owner_employee_id = their ID
+                    params['owner_employee_id'] = f'eq.{emp_id}'
+                    
+                    # TODO: Also include shared contacts (would need OR query or separate call)
+            else:
+                debug_log("No employee found, loading no contacts")
+                # No employee record = no contacts
+                return
             
+            debug_log(f"Query params: {params}")
             response = requests.get(url, headers=self.headers, params=params)
             debug_log(f"Contacts API response: {response.status_code}")
             
@@ -236,12 +269,13 @@ class SupabaseStorage(BaseStorage):
         debug_log("SupabaseStorage.__init__ called")
         super().__init__(configuration)
         self.supabase_url = os.getenv('SUPABASE_URL')
-        self.supabase_key = os.getenv('SUPABASE_ANON_KEY')
+        # Use service role key to bypass RLS - Radicale handles all auth
+        self.supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('SUPABASE_ANON_KEY')
         debug_log(f"SUPABASE_URL={self.supabase_url}")
-        debug_log(f"Using RLS with per-user JWTs")
+        debug_log(f"Using key: {'SERVICE_ROLE (bypasses RLS)' if os.getenv('SUPABASE_SERVICE_ROLE_KEY') else 'ANON (uses RLS)'}")
         
         if not self.supabase_url or not self.supabase_key:
-            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required")
+            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) required")
         
         debug_log("SupabaseStorage initialized successfully")
     
