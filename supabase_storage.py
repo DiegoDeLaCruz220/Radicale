@@ -203,12 +203,13 @@ class SupabaseStorage(BaseStorage):
         debug_log("SupabaseStorage.__init__ called")
         super().__init__(configuration)
         self.supabase_url = os.getenv('SUPABASE_URL')
-        self.supabase_key = os.getenv('SUPABASE_ANON_KEY')
+        # Use service role key to bypass RLS - authentication is handled by Radicale
+        self.supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('SUPABASE_ANON_KEY')
         debug_log(f"SUPABASE_URL={self.supabase_url}")
-        debug_log(f"SUPABASE_ANON_KEY={'set' if self.supabase_key else 'not set'}")
+        debug_log(f"Using key type: {'SERVICE_ROLE' if os.getenv('SUPABASE_SERVICE_ROLE_KEY') else 'ANON'}")
         
         if not self.supabase_url or not self.supabase_key:
-            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required")
+            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) environment variables are required")
         
         debug_log("SupabaseStorage initialized successfully")
     
