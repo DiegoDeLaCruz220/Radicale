@@ -255,13 +255,23 @@ class SupabaseCollection(BaseCollection):
     
     def serialize(self):
         """Serialize entire collection to vCard format for download"""
-        if not self._items:
-            return ""
-        # Combine all vCards into one file
-        vcards = []
-        for item in self._items.values():
-            vcards.append(item.serialize())
-        return "".join(vcards)
+        try:
+            debug_log(f"serialize() called, {len(self._items)} items to serialize")
+            if not self._items:
+                return ""
+            # Combine all vCards into one file
+            vcards = []
+            for uid, item in self._items.items():
+                debug_log(f"Serializing item {uid}")
+                vcards.append(item.serialize())
+            result = "".join(vcards)
+            debug_log(f"Serialization complete, {len(result)} bytes")
+            return result
+        except Exception as e:
+            debug_log(f"Error in serialize: {e}")
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+            raise
     
     def upload(self, href, item):
         """Upload not supported (read-only from Supabase)"""
